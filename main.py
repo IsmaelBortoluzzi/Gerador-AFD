@@ -59,6 +59,7 @@ class Automata:
         self.alphabet_machine = get_all_tokens(self.words, self.grammar)
         self.states = [[self.symbol_initial] + [''] * len(self.alphabet_machine)]
         self.last_state = 0
+        self.checked = set()
 
     def deep_index(self, word):
         """
@@ -114,7 +115,7 @@ class Automata:
                             self.alphabet[self.last_state]
                         self.create_state(state_final='*')
                         try:
-                            words[num_word + 1]
+                            self.words[num_word + 1]
                         except IndexError:
                             continue
                         self.create_state()
@@ -125,6 +126,7 @@ class Automata:
                         self.create_state()
 
         self.change_states_signature()
+
         for sentence in self.grammar:
             state = sentence.split('::=')[0].strip()[1]
             for x in range(len(self.states)):
@@ -155,25 +157,24 @@ class Automata:
 
     def build_afd(self):
         """
-            Function thats determize automata
+            Function that determines the automata
         """
         for state in self.states:
-            for token in state:
-                if not any(token in state[0] for state in self.states) and token:
+            for signature in state:
+                if not any(signature in state[0] for state in self.states) and signature:
                     state_final = False
                     # verify the token not have state, if not create the state but passed the name of state, btw the token
-                    for token_new_state in token:
+                    for token_new_state in signature:
                         if any('*' + token_new_state in state[0] for state in self.states) and \
-                                not any('*' + token in state[0] for state in self.states):
+                                not any('*' + signature in state[0] for state in self.states):
                             state_final = True
                     if state_final:
-                        self.create_state(state=token, state_final='*')
+                        self.create_state(state=signature, state_final='*')
                     else:
-                        self.create_state(state=token)
-                    indexes = self.deep_index(token)
-                    # self.states[indexes[0][0]][indexes[0][1]] = f"[{self.states[indexes[0][0]][indexes[0][1]]}]"
+                        self.create_state(state=signature)
+                    indexes = self.deep_index(signature)
                     self.states[indexes[0][0]][indexes[0][1]] = self.states[indexes[0][0]][indexes[0][1]]
-                    for new_token in token:
+                    for new_token in signature:
                         # add states for new state
                         indexes_tokens = self.deep_index(new_token)
                         for key, valor in enumerate(self.states[indexes_tokens[-1][0]]):
@@ -183,10 +184,55 @@ class Automata:
                             self.states[-1][key] += valor
 
         for state in self.states:
-            for token in state:
+            for signature in state:
                 # its ugly but here to be recursivity that function
-                if not any(token in state[0] for state in self.states) and token:
+                if not any(signature in state[0] for state in self.states) and signature:
                     self.build_afd()
+
+    def minimize(self):
+        self.remove_unreachable()
+        self.remove_deads()
+
+    def remove_unreachable(self):
+        self.checked.update(self.states[0])
+        len_checked = len(self.checked)
+        newly_added_states = set()
+
+        new_len_checked = self.annotate_states(newly_added_states)
+        while len_checked != new_len_checked:
+            len_checked = new_len_checked
+            new_len_checked = self.annotate_states(newly_added_states)
+
+        for state in self.states:
+            if '*' in state[0]:
+                state_signature = state[0][1:]
+            else:
+                state_signature = state[0]
+            if state_signature not in self.checked:
+                state[0] = 'UNREACHABLE'
+
+        self.states = list(filter(lambda x: x[0] != 'UNREACHABLE', self.states))
+
+    def annotate_states(self, newly_added_states):
+        for state_signature in self.checked:
+            if state_signature == '':
+                continue
+            state = self.get_state_by_signature(state_signature)
+            for signature in state:
+                if '*' in signature:
+                    newly_added_states.add(signature[-1])
+                else:
+                    newly_added_states.add(signature)
+        self.checked = self.checked.union(newly_added_states)
+        return len(self.checked)
+
+    def get_state_by_signature(self, signature):
+        for x in self.states:
+            if x[0] in (signature, f'*{signature}'):
+                return x
+
+    def remove_deads(self):
+        pass
 
     def create_state_error(self):
         """
@@ -203,6 +249,8 @@ class Automata:
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato não determinizado')
         self.build_afd()
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato determinizado')
+        self.minimize()
+        print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato minimizado')
         self.create_state_error()
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato com estado de erro')
 
