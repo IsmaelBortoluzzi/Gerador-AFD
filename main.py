@@ -220,7 +220,7 @@ class Automata:
             state = self.get_state_by_signature(state_signature)
             for signature in state:
                 if '*' in signature:
-                    newly_added_states.add(signature[-1])
+                    newly_added_states.add(signature[1:])
                 else:
                     newly_added_states.add(signature)
         self.checked = self.checked.union(newly_added_states)
@@ -255,7 +255,7 @@ class Automata:
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato com estado de erro')
 
 
-words, grammar = formalize_data('tokens_grammar.txt')
+words, grammar = formalize_data('tokens_grammar2.txt')
 # words = ['se', 'entao', 'senao', 'a', 'e', 'i', 'o', 'u']
 
 aut = Automata(words=words, grammar=grammar)
