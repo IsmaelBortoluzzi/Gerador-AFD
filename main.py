@@ -232,9 +232,51 @@ class Automata:
                 return x
 
     def remove_deads(self):
-        pass
+        for index, state in enumerate(self.states):
+            self.checked = set(self.states[index])
+            len_checked = len(self.checked)
+            newly_added_states = set()
+            is_dead = True
 
-    def create_state_error(self):
+            new_len_checked, is_dead = self.check_if_is_dead(newly_added_states, is_dead)
+            while len_checked != new_len_checked:
+                if is_dead is False:
+                    break
+                len_checked = new_len_checked
+                new_len_checked, is_dead = self.check_if_is_dead(newly_added_states, is_dead)
+
+            if is_dead is True:
+                self.states[index][0] = 'DEAD'
+
+        self.states = list(filter(lambda x: x[0] != 'DEAD', self.states))
+        self.remove_transitions_to_dead_and_unreachable()
+
+    def check_if_is_dead(self, newly_added_states, is_dead):
+        for state in self.checked:
+            if state == '':
+                continue
+            s = self.get_state_by_signature(state)
+            for signature in s:
+                if '*' in signature:
+                    newly_added_states.add(signature[1:])
+                    is_dead = False
+                    break
+                else:
+                    newly_added_states.add(signature)
+            if is_dead is False:
+                break
+
+        self.checked = self.checked.union(newly_added_states)
+        return len(self.checked), is_dead
+
+    def remove_transitions_to_dead_and_unreachable(self):
+        all_states = [x[0] if '*' not in x[0] else x[0][1:] for x in self.states]
+        for index_one, states in enumerate(self.states):
+            for index_two, state in enumerate(states):
+                if state not in all_states and index_two != 0:
+                    self.states[index_one][index_two] = ''
+
+    def create_error_state(self):
         """
             Maping blanks states and subscribe for state
         """
@@ -251,11 +293,11 @@ class Automata:
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato determinizado')
         self.minimize()
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato minimizado')
-        self.create_state_error()
+        self.create_error_state()
         print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato com estado de erro')
 
 
-words, grammar = formalize_data('tokens_grammar2.txt')
+words, grammar = formalize_data('tokens_grammar.txt')
 # words = ['se', 'entao', 'senao', 'a', 'e', 'i', 'o', 'u']
 
 aut = Automata(words=words, grammar=grammar)
