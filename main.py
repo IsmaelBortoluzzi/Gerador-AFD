@@ -125,16 +125,18 @@ class Automata:
                             self.alphabet[self.last_state]
                         self.create_state()
 
-        self.change_states_signature()
+        self.change_states_signature()  # troca o nome das regras da gramatica para n ter conflito
 
         for sentence in self.grammar:
-            state = sentence.split('::=')[0].strip()[1]
-            for x in range(len(self.states)):
+            state = sentence.split('::=')[0].strip()[1]  # pega o nome da regra
+            for x in range(len(self.states)):            # cata a posição de cada regra da gramatica na matriz
                 if self.states[x][0] in (state, f'*{state}'):
+                    # pega todas as transições da regra
                     tokens_with_next_state = sentence.split('::=')[1].replace(' ', '').replace('>', '').split('|')
                     self.remove_epsolon(tokens_with_next_state)
                     for token_state in tokens_with_next_state:
                         token, state = token_state.split('<')
+                        # pega a posicao do token na matriz e adiciona a transição na posicao correta na regra
                         self.states[x][self.alphabet_machine.index(token) + 1] += state
                     break
 
@@ -194,15 +196,19 @@ class Automata:
         self.remove_deads()
 
     def remove_unreachable(self):
-        self.checked.update(self.states[0])
+        self.checked.update(self.states[0])  # pega as transicoes da regra inicial
         len_checked = len(self.checked)
         newly_added_states = set()
 
-        new_len_checked = self.annotate_states(newly_added_states)
+        new_len_checked = self.annotate_states(newly_added_states)  # anota as transicoes das transicoes da regra inicia
+
+        # checa se mais regras foram atingidas nas segundas transicoes e repete o processo
+        # nas regras atingidas ate n ter mais transicoes para regras novas
         while len_checked != new_len_checked:
             len_checked = new_len_checked
             new_len_checked = self.annotate_states(newly_added_states)
 
+        # varremos self.states e se tiver alguma regra n atingida marcaremos como UNREACHABLE para filtrar depois
         for state in self.states:
             if '*' in state[0]:
                 state_signature = state[0][1:]
@@ -217,14 +223,14 @@ class Automata:
         for state_signature in self.checked:
             if state_signature == '':
                 continue
-            state = self.get_state_by_signature(state_signature)
-            for signature in state:
+            state = self.get_state_by_signature(state_signature)  # pega a lista de transicoes da regra
+            for signature in state:  # adiciona cada transicao da regra para unir com as existentes em self.checked
                 if '*' in signature:
                     newly_added_states.add(signature[1:])
                 else:
                     newly_added_states.add(signature)
         self.checked = self.checked.union(newly_added_states)
-        return len(self.checked)
+        return len(self.checked)  # para ver se foi adicionada regra nova
 
     def get_state_by_signature(self, signature):
         for x in self.states:
@@ -232,6 +238,9 @@ class Automata:
                 return x
 
     def remove_deads(self):
+        # é mais ou menos a mesma coisa de remove_unreachable(), mas para todas as regras inves de
+        # somente para a inicial, e com o detalhe de q basta acharmos uma regra final para parar
+        # a busca e partir para o proximo estado
         for index, state in enumerate(self.states):
             self.checked = set(self.states[index])
             len_checked = len(self.checked)
@@ -249,6 +258,8 @@ class Automata:
                 self.states[index][0] = 'DEAD'
 
         self.states = list(filter(lambda x: x[0] != 'DEAD', self.states))
+
+        # depois de remover estados mortos da matriz, removemos transicoes para eles tbm
         self.remove_transitions_to_dead_and_unreachable()
 
     def check_if_is_dead(self, newly_added_states, is_dead):
