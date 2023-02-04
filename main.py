@@ -50,14 +50,14 @@ def get_all_tokens(words, grammar):
 
 class Automata:
     def __init__(self, words, grammar):
-        self.symbol_initial = 'S'
+        self.initial_symbol = 'S'
         self.sigma = '\u03B4'
         self.epsilon = '\u03B5'
         self.alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
         self.words = words
         self.grammar = grammar
-        self.alphabet_machine = get_all_tokens(self.words, self.grammar)
-        self.states = [[self.symbol_initial] + [''] * len(self.alphabet_machine)]
+        self.all_tokens = get_all_tokens(self.words, self.grammar)
+        self.states = [[self.initial_symbol] + [''] * len(self.all_tokens)]
         self.last_state = 0
         self.checked = set()
 
@@ -83,11 +83,11 @@ class Automata:
         if new:
             if state:
                 self.states = self.states + [
-                    [kwargs.get('state_final', '') + state] + [''] * len(self.alphabet_machine)
+                    [kwargs.get('state_final', '') + state] + [''] * len(self.all_tokens)
                 ]
             else:
                 self.states = self.states + [
-                    [self.get_state(state_final=kwargs.get('state_final', ''))] + [''] * len(self.alphabet_machine)
+                    [self.get_state(state_final=kwargs.get('state_final', ''))] + [''] * len(self.all_tokens)
                 ]
                 self.last_state += 1
 
@@ -102,16 +102,16 @@ class Automata:
                     # here is the first token in word or alphabet not in S
                     if num_word == 0:
                         # add in S the first token and create new state
-                        self.states[0][self.alphabet_machine.index(token) + 1] += self.alphabet[self.last_state]
+                        self.states[0][self.all_tokens.index(token) + 1] += self.alphabet[self.last_state]
                         self.create_state()
                     else:
                         # only add in S the token
-                        self.states[0][self.alphabet_machine.index(token) + 1] += self.alphabet[self.last_state - 1]
+                        self.states[0][self.all_tokens.index(token) + 1] += self.alphabet[self.last_state - 1]
                 else:
                     if num_token == len_word:
                         # here is the reason for -1, when it's the final token in the word add state
                         # and create new state
-                        self.states[self.last_state][self.alphabet_machine.index(token) + 1] = \
+                        self.states[self.last_state][self.all_tokens.index(token) + 1] = \
                             self.alphabet[self.last_state]
                         self.create_state(state_final='*')
                         try:
@@ -121,7 +121,7 @@ class Automata:
                         self.create_state()
                     else:
                         # the normal process, add state and create new state
-                        self.states[self.last_state][self.alphabet_machine.index(token) + 1] = \
+                        self.states[self.last_state][self.all_tokens.index(token) + 1] = \
                             self.alphabet[self.last_state]
                         self.create_state()
 
@@ -137,7 +137,7 @@ class Automata:
                     for token_state in tokens_with_next_state:
                         token, state = token_state.split('<')
                         # pega a posicao do token na matriz e adiciona a transição na posicao correta na regra
-                        self.states[x][self.alphabet_machine.index(token) + 1] += state
+                        self.states[x][self.all_tokens.index(token) + 1] += state
                     break
 
     def change_states_signature(self):
@@ -299,13 +299,13 @@ class Automata:
 
     def compile(self):
         self.build_afnd()
-        print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato não determinizado')
+        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato não determinizado')
         self.build_afd()
-        print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato determinizado')
+        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato determinizado')
         self.minimize()
-        print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato minimizado')
+        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato minimizado')
         self.create_error_state()
-        print_table(aut.states, [aut.sigma] + aut.alphabet_machine, 'autômato com estado de erro')
+        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato com estado de erro')
 
 
 words, grammar = formalize_data('tokens_grammar.txt')
