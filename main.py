@@ -53,7 +53,10 @@ class Automata:
         self.initial_symbol = 'S'
         self.sigma = '\u03B4'
         self.epsilon = '\u03B5'
-        self.alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+        self.alphabet = [
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+            'N', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+        ]
         self.words = words
         self.grammar = grammar
         self.all_tokens = get_all_tokens(self.words, self.grammar)
@@ -61,25 +64,13 @@ class Automata:
         self.last_state = 0
         self.checked = set()
 
-    def deep_index(self, word):
-        """
-            Function return index list of list (0, 0) S[0][0]
-        """
+    def get_index(self, word):
         return [(i, sub.index(word)) for (i, sub) in enumerate(self.states) if word in sub]
 
     def get_state(self, position=0, **kwargs):
-        """
-            Function return actual state by autoincrement
-        """
         return kwargs.get('state_final', '') + self.alphabet[self.last_state - position]
 
     def create_state(self, new=True, state='', **kwargs):
-        """
-            Function that creates the state
-            state: pre-defined(in case when determize) the new state
-             is the state parameter passed in function,
-            state_final: passed in kwargs, generally is the '*'
-        """
         if new:
             if state:
                 self.states = self.states + [
@@ -92,27 +83,18 @@ class Automata:
                 self.last_state += 1
 
     def build_afnd(self):
-        """
-            Function get the data and generate the automata finite
-        """
         for num_word, word in enumerate(self.words):
-            len_word = len(word) - 1  # decrement 1 for compare in enumerate for
+            len_word = len(word) - 1
             for num_token, token in enumerate(word):
                 if num_token == 0:
-                    # here is the first token in word or alphabet not in S
                     if num_word == 0:
-                        # add in S the first token and create new state
                         self.states[0][self.all_tokens.index(token) + 1] += self.alphabet[self.last_state]
                         self.create_state()
                     else:
-                        # only add in S the token
                         self.states[0][self.all_tokens.index(token) + 1] += self.alphabet[self.last_state - 1]
                 else:
                     if num_token == len_word:
-                        # here is the reason for -1, when it's the final token in the word add state
-                        # and create new state
-                        self.states[self.last_state][self.all_tokens.index(token) + 1] = \
-                            self.alphabet[self.last_state]
+                        self.states[self.last_state][self.all_tokens.index(token) + 1] = self.alphabet[self.last_state]
                         self.create_state(state_final='*')
                         try:
                             self.words[num_word + 1]
@@ -120,9 +102,7 @@ class Automata:
                             continue
                         self.create_state()
                     else:
-                        # the normal process, add state and create new state
-                        self.states[self.last_state][self.all_tokens.index(token) + 1] = \
-                            self.alphabet[self.last_state]
+                        self.states[self.last_state][self.all_tokens.index(token) + 1] = self.alphabet[self.last_state]
                         self.create_state()
 
         self.change_states_signature()  # troca o nome das regras da gramatica para n ter conflito
@@ -133,7 +113,7 @@ class Automata:
                 if self.states[x][0] in (state, f'*{state}'):
                     # pega todas as transições da regra
                     tokens_with_next_state = sentence.split('::=')[1].replace(' ', '').replace('>', '').split('|')
-                    self.remove_epsolon(tokens_with_next_state)
+                    self.remove_epsilon(tokens_with_next_state)
                     for token_state in tokens_with_next_state:
                         token, state = token_state.split('<')
                         # pega a posicao do token na matriz e adiciona a transição na posicao correta na regra
@@ -153,19 +133,15 @@ class Automata:
         for x in range(len(self.grammar)):
             self.grammar[x] = self.grammar[x].replace(state, new_state)
 
-    def remove_epsolon(self, tokens_with_next_state):
+    def remove_epsilon(self, tokens_with_next_state):
         if self.epsilon in tokens_with_next_state:
             tokens_with_next_state.remove(self.epsilon)
 
     def build_afd(self):
-        """
-            Function that determines the automata
-        """
         for state in self.states:
             for signature in state:
                 if not any(signature in state[0] for state in self.states) and signature:
                     state_final = False
-                    # verify the token not have state, if not create the state but passed the name of state, btw the token
                     for token_new_state in signature:
                         if any('*' + token_new_state in state[0] for state in self.states) and \
                                 not any('*' + signature in state[0] for state in self.states):
@@ -174,26 +150,23 @@ class Automata:
                         self.create_state(state=signature, state_final='*')
                     else:
                         self.create_state(state=signature)
-                    indexes = self.deep_index(signature)
+                    indexes = self.get_index(signature)
                     self.states[indexes[0][0]][indexes[0][1]] = self.states[indexes[0][0]][indexes[0][1]]
                     for new_token in signature:
-                        # add states for new state
-                        indexes_tokens = self.deep_index(new_token)
+                        indexes_tokens = self.get_index(new_token)
                         for key, valor in enumerate(self.states[indexes_tokens[-1][0]]):
                             if key == 0 or not valor:
-                                # not subscribe the name of state
                                 continue
                             self.states[-1][key] += valor
 
         for state in self.states:
             for signature in state:
-                # its ugly but here to be recursivity that function
                 if not any(signature in state[0] for state in self.states) and signature:
                     self.build_afd()
 
     def minimize(self):
         self.remove_unreachable()
-        self.remove_deads()
+        self.remove_dead()
 
     def remove_unreachable(self):
         self.checked.update(self.states[0])  # pega as transicoes da regra inicial
@@ -237,7 +210,7 @@ class Automata:
             if x[0] in (signature, f'*{signature}'):
                 return x
 
-    def remove_deads(self):
+    def remove_dead(self):
         # é mais ou menos a mesma coisa de remove_unreachable(), mas para todas as regras inves de
         # somente para a inicial, e com o detalhe de q basta acharmos uma regra final para parar
         # a busca e partir para o proximo estado
@@ -260,7 +233,7 @@ class Automata:
         self.states = list(filter(lambda x: x[0] != 'DEAD', self.states))
 
         # depois de remover estados mortos da matriz, removemos transicoes para eles tbm
-        self.remove_transitions_to_dead_and_unreachable()
+        self.remove_transitions_to_dead()
 
     def check_if_is_dead(self, newly_added_states, is_dead):
         for state in self.checked:
@@ -280,7 +253,7 @@ class Automata:
         self.checked = self.checked.union(newly_added_states)
         return len(self.checked), is_dead
 
-    def remove_transitions_to_dead_and_unreachable(self):
+    def remove_transitions_to_dead(self):
         all_states = [x[0] if '*' not in x[0] else x[0][1:] for x in self.states]
         for index_one, states in enumerate(self.states):
             for index_two, state in enumerate(states):
@@ -288,14 +261,11 @@ class Automata:
                     self.states[index_one][index_two] = ''
 
     def create_error_state(self):
-        """
-            Maping blanks states and subscribe for state
-        """
-        self.create_state(state='<e>', state_final='*')
+        self.create_state(state='<ERROR>', state_final='*')
         for key_state, state in enumerate(self.states):
             for key_token, token in enumerate(state):
                 if not token:
-                    self.states[key_state][key_token] = '<e>'
+                    self.states[key_state][key_token] = '<ERROR>'
 
     def compile(self):
         self.build_afnd()
@@ -309,7 +279,6 @@ class Automata:
 
 
 words, grammar = formalize_data('tokens_grammar.txt')
-# words = ['se', 'entao', 'senao', 'a', 'e', 'i', 'o', 'u']
 
 aut = Automata(words=words, grammar=grammar)
 aut.compile()
