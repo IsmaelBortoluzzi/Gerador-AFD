@@ -73,11 +73,11 @@ class Automata:
     def create_state(self, new=True, state='', **kwargs):
         if new:
             if state:
-                self.states = self.states + [
+                self.states += [
                     [kwargs.get('state_final', '') + state] + [''] * len(self.all_tokens)
                 ]
             else:
-                self.states = self.states + [
+                self.states += [
                     [self.get_state(state_final=kwargs.get('state_final', ''))] + [''] * len(self.all_tokens)
                 ]
                 self.last_state += 1
@@ -269,13 +269,13 @@ class Automata:
 
     def compile(self):
         self.build_afnd()
-        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato não determinizado')
+        print_table(self.states, [self.sigma] + self.all_tokens, 'autômato não determinizado')
         self.build_afd()
-        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato determinizado')
+        print_table(self.states, [self.sigma] + self.all_tokens, 'autômato determinizado')
         self.minimize()
-        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato minimizado')
+        print_table(self.states, [self.sigma] + self.all_tokens, 'autômato minimizado')
         self.create_error_state()
-        print_table(aut.states, [aut.sigma] + aut.all_tokens, 'autômato com estado de erro')
+        print_table(self.states, [self.sigma] + self.all_tokens, 'autômato com estado de erro')
 
 
 words, grammar = formalize_data('tokens_grammar.txt')
