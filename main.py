@@ -64,9 +64,6 @@ class Automata:
         self.last_state = 0
         self.checked = set()
 
-    def get_index(self, word):
-        return [(i, sub.index(word)) for (i, sub) in enumerate(self.states) if word in sub]
-
     def get_state(self, position=0, **kwargs):
         return kwargs.get('state_final', '') + self.alphabet[self.last_state - position]
 
@@ -150,11 +147,10 @@ class Automata:
                         self.create_state(state=signature, state_final='*')
                     else:
                         self.create_state(state=signature)
-                    indexes = self.get_index(signature)
-                    self.states[indexes[0][0]][indexes[0][1]] = self.states[indexes[0][0]][indexes[0][1]]
+
                     for new_token in signature:
-                        indexes_tokens = self.get_index(new_token)
-                        for key, valor in enumerate(self.states[indexes_tokens[-1][0]]):
+                        indexes_tokens = self.get_state_index_by_signature(new_token)
+                        for key, valor in enumerate(self.states[indexes_tokens]):
                             if key == 0 or not valor:
                                 continue
                             self.states[-1][key] += valor
@@ -163,6 +159,11 @@ class Automata:
             for signature in state:
                 if not any(signature in state[0] for state in self.states) and signature:
                     self.build_afd()
+
+    def get_state_index_by_signature(self, signature):
+        for i, x in enumerate(self.states):
+            if x[0] in (signature, f'*{signature}'):
+                return i
 
     def minimize(self):
         self.remove_unreachable()
